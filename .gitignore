@@ -1,0 +1,22 @@
+# Dependências
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+
+# Configurações de Ambiente (NÃO SUBIR CHAVES DE API)
+.env
+.env.*
+!.env.example
+
+# Pastas de processamento e logs
+.data/
+logs/
+artifacts/
+scratch/
+
+# OS
+.DS_Store
+Thumbs.db
