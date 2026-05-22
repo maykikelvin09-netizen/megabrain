@@ -60,72 +60,65 @@ async function processMessage(message, chat) {
     }
 
     try {
-        // 3. Verifica se Marco já assumiu
-        const recentMsgs = await chat.fetchMessages({ limit: 5 });
-        const didMarcoTakeOver = recentMsgs.some(m => m.fromMe && !m.body.startsWith(BOT_SIGNATURE));
-        
-        if (didMarcoTakeOver) {
+        // 3. Verifica se Marco assumiu (Tracking em memória)
+        if (humanTakenOver.has(userId)) {
             console.log(`🔇 O Marco já assumiu a conversa com ${userId}. O bot ficará quieto.`);
             return;
         }
 
         // 4. Lógica Híbrida: Mensagem padrão vs Dúvida real
         const isInitialTrigger = userMsg.includes("Olá, tenho uma dúvida sobre o Influencer IA Sem Limites");
-        const didBotAlreadyReplyToTrigger = recentMsgs.some(m => m.fromMe && m.body.includes("qual seria a dúvida?"));
-
-        if (isInitialTrigger && !didBotAlreadyReplyToTrigger) {
-            console.log(`📩 Lead detectado (${userId}). Preparando saudação padrão (Sem IA)...`);
+        
+        if (isInitialTrigger) {
+            isLead.add(userId); // Marca como lead
             
-            const hour = new Date().getHours();
-            let greeting = "Boa noite";
-            if (hour >= 5 && hour < 12) greeting = "Bom dia";
-            else if (hour >= 12 && hour < 18) greeting = "Boa tarde";
+            if (!hasGreeted.has(userId)) {
+                console.log(`📩 Lead detectado (${userId}). Preparando saudação padrão (Sem IA)...`);
+                hasGreeted.add(userId);
+                
+                const hour = new Date().getHours();
+                let greeting = "Boa noite";
+                if (hour >= 5 && hour < 12) greeting = "Bom dia";
+                else if (hour >= 12 && hour < 18) greeting = "Boa tarde";
 
-            const reply = `${greeting}, qual seria a dúvida?`;
+                const reply = `${greeting}, qual seria a dúvida?`;
 
-            // --- DELAY HUMANO ESTRATÉGICO ---
-            const delayMs = 1000 + (reply.length * 20);
-            console.log(`⏱️ Aguardando ${delayMs}ms para enviar: "${reply}"`);
-            
-            await chat.sendStateTyping();
-            await sleep(delayMs);
-            await chat.clearState();
+                // --- DELAY HUMANO ESTRATÉGICO ---
+                const delayMs = 1000 + (reply.length * 20);
+                console.log(`⏱️ Aguardando ${delayMs}ms para enviar: "${reply}"`);
+                
+                await chat.sendStateTyping();
+                await sleep(delayMs);
+                await chat.clearState();
 
-            await client.sendMessage(userId, BOT_SIGNATURE + reply);
-            console.log(`🤖 Saudação enviada para ${userId}`);
-            return; // Interrompe para não chamar a IA
-
-        } else if (isInitialTrigger && didBotAlreadyReplyToTrigger) {
-            // Cliente mandou a mensagem padrão de novo (spam), ignora.
-            return;
+                await client.sendMessage(userId, BOT_SIGNATURE + reply);
+                
+                // Salva no histórico em memória
+                if (!userHistory.has(userId)) userHistory.set(userId, []);
+                userHistory.get(userId).push({ role: "assistant", content: reply });
+                
+                console.log(`🤖 Saudação enviada para ${userId}`);
+                return; // Interrompe para não chamar a IA
+            } else {
+                // Cliente mandou a mensagem padrão de novo (spam), ignora.
+                return;
+            }
         }
 
-        // Se chegou aqui e não tem isInitialTrigger na frase, quer dizer que ele fez uma pergunta normal
-        // E precisamos checar se ele realmente é um Lead (ou seja, se no histórico ele mandou a frase padrão)
-        const isLeadInHistory = recentMsgs.some(m => m.body && m.body.includes("Influencer IA Sem Limites"));
-        if (!isLeadInHistory) {
-            return; // Ignora se for família, amigos, etc.
+        // Se chegou aqui, não é trigger. Precisamos saber se ele é um Lead.
+        if (!isLead.has(userId)) {
+            return; // Ignora família, amigos, etc.
         }
 
         // 5. Inteligência Artificial: O cliente fez uma pergunta real
         console.log(`📩 Processando dúvida com IA para (${userId}): ${userMsg}`);
 
-        // Monta o histórico das últimas mensagens
-        let conversationHistory = [];
-        for (let msg of recentMsgs) {
-            // Ignora mensagens padrão de gatilho e saudações automáticas para não confundir a IA
-            if (msg.body && msg.body.includes("Olá, tenho uma dúvida sobre o Influencer IA Sem Limites")) continue;
-            if (msg.body && msg.body.includes("qual seria a dúvida?")) continue;
+        // Atualiza histórico em memória com a pergunta do usuário
+        if (!userHistory.has(userId)) userHistory.set(userId, []);
+        userHistory.get(userId).push({ role: "user", content: userMsg });
 
-            // Ignora áudios
-            if (msg.hasMedia || msg.type === 'audio' || msg.type === 'ptt') continue;
-
-            if (msg.fromMe) {
-                conversationHistory.push({ role: "assistant", content: msg.body.replace(BOT_SIGNATURE, '') });
-            } else {
-                conversationHistory.push({ role: "user", content: msg.body });
-            }
-        }
+        // Limita o histórico às últimas 6 interações para economizar tokens
+        let conversationHistory = userHistory.get(userId).slice(-6);
 
         const systemPrompt = `Sua identidade: Você é um ser humano no WhatsApp vendendo o treinamento "Influencer IA Sem Limites".
 Seu estilo é EXTREMAMENTE curto, informal e direto (nada de textões de IA). Você fala igual a um brasileiro no WhatsApp.
@@ -217,6 +210,9 @@ const userTimers = new Map();
 const userChains = new Map();
 
 const humanTakenOver = new Set();
+const isLead = new Set();
+const hasGreeted = new Set();
+const userHistory = new Map();
 
 client.on('message_create', async (msg) => {
     // Se a mensagem foi enviada pelo dono do celular e não tem a assinatura do bot
