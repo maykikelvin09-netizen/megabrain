@@ -27,7 +27,6 @@ const client = new Client({
             '--disable-accelerated-2d-canvas',
             '--no-first-run',
             '--no-zygote',
-            '--single-process',
             '--disable-gpu'
         ],
         timeout: 120000,
@@ -60,7 +59,7 @@ async function processMessage(message, chat) {
 
     try {
         // 3. Verifica se Marco já assumiu
-        const recentMsgs = await chat.fetchMessages({ limit: 15 });
+        const recentMsgs = await chat.fetchMessages({ limit: 5 });
         const didMarcoTakeOver = recentMsgs.some(m => m.fromMe && !m.body.startsWith(BOT_SIGNATURE));
         
         if (didMarcoTakeOver) {
