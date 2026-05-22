@@ -84,7 +84,7 @@ async function processMessage(message, chat) {
             const reply = `${greeting}, qual seria a dúvida?`;
 
             // --- DELAY HUMANO ESTRATÉGICO ---
-            const delayMs = 2000 + (reply.length * 40);
+            const delayMs = 1000 + (reply.length * 20);
             console.log(`⏱️ Aguardando ${delayMs}ms para enviar: "${reply}"`);
             
             await chat.sendStateTyping();
@@ -193,7 +193,7 @@ REGRAS:
         }
 
         // Se não for pedido de exemplo, segue o fluxo normal de texto
-        const delayMs = 2000 + (reply.length * 40);
+        const delayMs = 1000 + (reply.length * 20);
         console.log(`⏱️ Aguardando ${delayMs}ms para simular digitação humana de IA...`);
         
         await chat.sendStateTyping();
@@ -252,7 +252,7 @@ client.on('message', async (message) => {
         
         userChains.set(userId, nextChain);
         
-    }, 4000);
+    }, 2000);
 
     userTimers.set(userId, timer);
 });
