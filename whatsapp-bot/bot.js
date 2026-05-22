@@ -43,13 +43,15 @@ client.on('qr', (qr) => {
 // Função auxiliar para criar delay
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Assinatura invisível do bot
+const BOT_SIGNATURE = '\u200B';
+
 async function processMessage(message, chat) {
     // 1. Ignora grupos e status
     if (chat.isGroup || message.isStatus) return;
 
     const userMsg = message.body;
     const userId = message.from;
-    const BOT_SIGNATURE = '\u200B';
     
     // 2. Filtro de Mídia (Ignorar Áudios e Imagens)
     if (message.hasMedia || message.type === 'audio' || message.type === 'ptt') {
@@ -213,6 +215,15 @@ client.on('ready', async () => {
 
 const userTimers = new Map();
 const userChains = new Map();
+
+const humanTakenOver = new Set();
+
+client.on('message_create', async (msg) => {
+    // Se a mensagem foi enviada pelo dono do celular e não tem a assinatura do bot
+    if (msg.fromMe && msg.body && !msg.body.startsWith(BOT_SIGNATURE)) {
+        humanTakenOver.add(msg.to);
+    }
+});
 
 client.on('message', async (message) => {
     const chat = await message.getChat();
