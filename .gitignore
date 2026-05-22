@@ -20,3 +20,5 @@ scratch/
 # OS
 .DS_Store
 Thumbs.db
+whatsapp-bot/.wwebjs_auth/
+whatsapp-bot/.wwebjs_cache/
