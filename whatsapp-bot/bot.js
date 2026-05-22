@@ -197,37 +197,7 @@ REGRAS:
 
 client.on('ready', async () => {
     console.log('✅ O Bot do "Influencer IA" está conectado!');
-    
-    console.log('🔍 Buscando leads esquecidos nas últimas 50 conversas (Backlog)...');
-    try {
-        const chats = await client.getChats();
-        // Em vez de olhar apenas as "Não Lidas" (bolinha verde), pega as 50 mais recentes
-        const recentChats = chats.slice(0, 50).filter(c => !c.isGroup);
-        
-        let processed = 0;
-        for (const chat of recentChats) {
-            const messages = await chat.fetchMessages({ limit: 1 });
-            if (messages.length > 0) {
-                const lastMessage = messages[0];
-                // Se a última mensagem foi do cliente (ninguém respondeu ainda)
-                if (!lastMessage.fromMe) {
-                    const userId = lastMessage.from;
-                    const previousChain = userChains.get(userId) || Promise.resolve();
-                    const nextChain = previousChain.then(async () => {
-                        await processMessage(lastMessage, chat);
-                        await chat.sendSeen(); // Tira a notificação
-                    }).catch(err => console.error("Erro no processamento do backlog:", err));
-                    userChains.set(userId, nextChain);
-                    processed++;
-                }
-            }
-        }
-        console.log(`✅ Backlog processado com sucesso! ${processed} conversas analisadas.`);
-    } catch(err) {
-        console.error("Erro ao processar backlog:", err);
-    }
-    
-    console.log('👀 Escutando novas mensagens em tempo real...');
+    console.log('🎧 Escutando novas mensagens em tempo real...');
 });
 
 const userTimers = new Map();
