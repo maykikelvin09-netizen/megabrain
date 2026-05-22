@@ -20,8 +20,20 @@ const openai = new OpenAI({
 const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    }
+        args: [
+            '--no-sandbox', 
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--single-process',
+            '--disable-gpu'
+        ],
+        timeout: 120000,
+    },
+    authTimeoutMs: 120000,
+    qrMaxRetries: 5,
 });
 
 client.on('qr', (qr) => {
