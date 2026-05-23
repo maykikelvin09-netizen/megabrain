@@ -67,7 +67,7 @@ async function processMessage(message, chat) {
         }
 
         // 4. Lógica Híbrida: Mensagem padrão vs Dúvida real
-        const isInitialTrigger = userMsg.includes("Olá, tenho uma dúvida sobre o Influencer IA Sem Limites");
+        const isInitialTrigger = userMsg.toLowerCase().includes("influencer ia");
         
         if (isInitialTrigger) {
             isLead.add(userId); // Marca como lead
@@ -222,35 +222,35 @@ client.on('message_create', async (msg) => {
 });
 
 client.on('message', async (message) => {
-    const chat = await message.getChat();
-    // Marca como lida para não ficar verde se o bot já vai responder
-    await chat.sendSeen(); 
-
-    // Ignora grupos e status para não criar timers desnecessários
-    if (chat.isGroup || message.isStatus) return;
+    // 🛡️ ESCUDO DE MEMÓRIA: IGNORA GRUPOS ANTES DE ABRIR A CONVERSA PARA NÃO TRAVAR O NAVEGADOR
+    if (message.from.endsWith('@g.us') || message.from === 'status@broadcast') return;
 
     const userId = message.from;
 
-    // Se o usuário mandar outra mensagem antes dos 4 segundos, cancela o timer anterior
-    if (userTimers.has(userId)) {
-        clearTimeout(userTimers.get(userId));
+    try {
+        const chat = await message.getChat();
+        await chat.sendSeen(); 
+
+        if (userTimers.has(userId)) {
+            clearTimeout(userTimers.get(userId));
+        }
+
+        const timer = setTimeout(async () => {
+            userTimers.delete(userId);
+            
+            const previousChain = userChains.get(userId) || Promise.resolve();
+            const nextChain = previousChain.then(async () => {
+                await processMessage(message, chat);
+            }).catch(err => console.error("Erro na fila de processamento:", err));
+            
+            userChains.set(userId, nextChain);
+            
+        }, 1500);
+
+        userTimers.set(userId, timer);
+    } catch (error) {
+        console.error("Erro ignorado para economizar RAM:", error.message);
     }
-
-    // Cria um novo timer de 4 segundos
-    const timer = setTimeout(async () => {
-        userTimers.delete(userId);
-        
-        // Sequencializa o processamento por usuário para evitar respostas duplicadas
-        const previousChain = userChains.get(userId) || Promise.resolve();
-        const nextChain = previousChain.then(async () => {
-            await processMessage(message, chat);
-        }).catch(err => console.error("Erro na fila de processamento:", err));
-        
-        userChains.set(userId, nextChain);
-        
-    }, 2000);
-
-    userTimers.set(userId, timer);
 });
 
 client.initialize();
